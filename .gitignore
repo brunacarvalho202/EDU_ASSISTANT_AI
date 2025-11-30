@@ -1,0 +1,35 @@
+.env
+estudo.txt
+modelotest.py
+
+# Ambiente virtual
+.venv/
+venv/
+
+# Arquivos de configuração sensíveis
+.env
+*.env
+
+# Caches Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Cache do pytest
+.pytest_cache/
+
+# IDE configs
+.vscode/
+.idea/
+
+# Streamlit
+.streamlit/
+
+# Docker
+*.log
+
+# Pasta de build ou artefatos
+build/
+dist/
+*.egg-info/
