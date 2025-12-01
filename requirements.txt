@@ -2,6 +2,7 @@ fastapi
 uvicorn[standard]
 streamlit
 pydantic
+pydantic-settings
 python-dotenv
 langchain
 google-generativeai
