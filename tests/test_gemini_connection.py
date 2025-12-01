@@ -15,3 +15,5 @@ def test_gemini_connection():
 
     # Assert
     assert "OK" in response.upper()
+
+    print("\nFuncionou...")
