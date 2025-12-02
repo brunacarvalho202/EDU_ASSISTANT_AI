@@ -1,0 +1,45 @@
+name: 1. CI - Testes e Sync dev → staging
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  test_and_sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar Testes Unitários
+        env:
+          RUN_INTEGRATION_TESTS: ''
+        run: pytest
+
+      # ----------------------------------------------------
+      # DEV → STAGING (push automático)
+      # ----------------------------------------------------
+      - name: Sync dev → staging
+        if: success()
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git fetch origin
+          git checkout staging
+          git merge origin/dev --no-ff -m "Merge automático dev → staging"
+          git push origin staging

@@ -1,15 +1,11 @@
-#(CD : Staging -> Main)
-#Este arquivo é responsável pela Entrega Contínua (CD). 
-#Ele é acionado quando o código é mesclado na main, constrói a imagem, salva no ECR e atualiza o ECS.
 
-# Caminho: .github/workflows/cd-ecr-deploy.yml
-name: 2. CD - Imagem e Deploy para Main
+name: 3. CD - Deploy para Produção
 
 # Este workflow é acionado somente quando o código é mesclado (merge) na branch 'main'
 on:
   push:
     branches:
-      - main
+      - master
 
 # Define as variáveis do ambiente de Produção
 env:
