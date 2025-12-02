@@ -6,9 +6,7 @@ on:
       - dev
 
 permissions:
-  # Permissão necessária para ler o código (Checkout)
   contents: read       
-  # Permissão base para o GITHUB_TOKEN, embora o PAT seja usado na Step de criar PR
   pull-requests: write 
   actions: read
 
@@ -33,20 +31,19 @@ jobs:
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
         env:
-          # Mantido o uso da string vazia para pular testes de integração (quando coloca false ele não funciona)
-          RUN_INTEGRATION_TESTS: ''  
+          # A linha abaixo é a que estava com problema de sintaxe/espaço
+          RUN_INTEGRATION_TESTS: '' 
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
           pytest
 
       # ----------------------------------------------------
-      # CRIAR PR DEV → STAGING (CORREÇÃO DE PERMISSÃO APLICADA)
+      # CRIAR PR DEV → STAGING 
       # ----------------------------------------------------
       - name: Criar Pull Request para Staging
-        if: success()   # só executa se os testes passarem
+        if: success()   
         uses: actions/github-script@v7
         with:
-          # 🚨 Usa o PAT (PR_CREATOR_TOKEN) para ter permissão de criar PRs
           github-token: ${{ secrets.PR_CREATOR_TOKEN }}
           script: |
             const headBranch = "dev";
