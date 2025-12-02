@@ -6,7 +6,7 @@
             "environment": [],
             "environmentFiles": [],
             "essential": true,
-            "image": "388945960828.dkr.ecr.us-east-2.amazonaws.com/cloud/edu_chat@sha256:32256256fbb4489693545f33793bd330bd1c9bbda19e66eb6852ca2defc40326",
+            "image": "placeholder",
             "logConfiguration": {
                 "logDriver": "awslogs",
                 "options": {
@@ -23,15 +23,11 @@
                 {
                     "appProtocol": "http",
                     "containerPort": 8000,
-                    "hostPort": 8000,
-                    "name": "fastapi_backend",
                     "protocol": "tcp"
                 },
                 {
                     "appProtocol": "http",
                     "containerPort": 8501,
-                    "hostPort": 8501,
-                    "name": "streamlit_frontend",
                     "protocol": "tcp"
                 }
             ],
@@ -53,6 +49,5 @@
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
-    },
-    "enableFaultInjection": false
+    }
 }
