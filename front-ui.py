@@ -15,4 +15,4 @@ if st.button("Enviar"):
             if response.status_code == 200:
                 st.success(response.json()["response"])
             else:
-                st.error("Erro ao chamar a API.")
+                st.error(f"Erro ao chamar a API.{response.text}")
