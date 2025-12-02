@@ -1,65 +1,93 @@
-name: PR Automática - staging → master
+name: 1. CI - Testes e Sincronização dev → staging
 
 on:
-  workflow_dispatch:
-    inputs:
-      message:
-        description: "Mensagem do CI"
-        required: false
-        default: "Atualização automática do staging"
-
-permissions:
-  contents: read
-  pull-requests: write
+  push:
+    branches:
+      - dev
 
 jobs:
-  create_pr:
+  test_and_sync:
     runs-on: ubuntu-latest
+    
+    # Define permissões no nível do job para evitar erros de sintaxe (como o 'Unexpected value workflows')
+    permissions:
+      contents: write     # Necessário para Checkout e para fazer o push com PAT
+      actions: read
+      workflows: write   # CRUCIAL para disparar o Workflow 2
 
     steps:
-      - name: Criar PR automaticamente
+      - name: Checkout Código
+        uses: actions/checkout@v4
+        with:
+          # Necessário para operações de merge
+          fetch-depth: 0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Dependências
+        run: pip install -r requirements.txt
+
+      - name: Rodar Testes Unitários
+        env:
+          # Mantido o uso da string vazia, conforme solicitado
+          RUN_INTEGRATION_TESTS: ''
+        run: pytest
+
+      # ----------------------------------------------------
+      # 1. SYNCHRONIZE dev → staging
+      # ----------------------------------------------------
+      - name: Sync dev → staging
+        id: sync
+        if: success()
+        env:
+          # Usa o PAT para a autenticação do push (permite o push na branch protegida)
+          PAT: ${{ secrets.PR_CREATOR_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          # 1. Verifica se há algo novo para mergear
+          git fetch origin --prune
+          if git merge-base --is-ancestor origin/dev staging; then
+              echo "A branch staging já inclui todas as alterações de dev. Pulando merge e dispatch."
+              echo "dispatch_required=false" >> $GITHUB_OUTPUT
+              exit 0
+          fi
+          
+          # 2. Faz o merge em staging
+          git checkout staging
+          git merge origin/dev --no-ff -m "Merge automático dev → staging"
+
+          # 3. PUSH usando PAT (necessário para o push, mas que não aciona workflows automaticamente)
+          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}
+          git push origin staging
+          
+          # 4. Sinaliza que o push ocorreu
+          echo "dispatch_required=true" >> $GITHUB_OUTPUT
+        
+      # ----------------------------------------------------
+      # 2. DISPARAR WORKFLOW 2 (PR staging → master)
+      # ----------------------------------------------------
+      - name: Disparar Workflow 2
+        if: steps.sync.outputs.dispatch_required == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
+          # Usa o GITHUB_TOKEN padrão, que tem permissão para disparar workflows
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const owner = context.repo.owner;
-            const repo = context.repo.repo;
-
-            console.log("Verificando PR existente...");
-
-            const prs = await github.rest.pulls.list({
-              owner,
-              repo,
-              state: "open"
-            });
-
-            const existing = prs.data.find(pr =>
-              pr.head.ref === "staging" && pr.base.ref === "master"
-            );
-
-            if (existing) {
-              console.log("PR já existe: #" + existing.number);
-              return;
-            }
-
-            console.log("Criando nova PR...");
-
-            try {
-              const pr = await github.rest.pulls.create({
-                owner,
-                repo,
-                head: "staging",
-                base: "master",
-                title: "Merge automático: staging → master",
-                body: context.payload.inputs?.message || "Atualização automática."
-              });
-
-              console.log("PR criada #" + pr.data.number);
-
-            } catch (e) {
-              if (e.status === 422) {
-                console.log("Nenhuma mudança entre staging e master.");
-              } else {
-                throw e;
+            console.log("Disparando o Workflow 2...");
+            
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              # O nome exato do arquivo YAML do Workflow 2
+              workflow_id: '2. pr-staging-master.yml', 
+              ref: 'staging',
+              inputs: {
+                message: 'PR acionada automaticamente após merge dev -> staging.'
               }
-            }
+            });
+            console.log("Workflow 2 disparado com sucesso!");
