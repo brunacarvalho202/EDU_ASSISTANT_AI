@@ -50,7 +50,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'Merge de dev para staging: Nova feature pronta para code review'
           title: 'Merge de Feature (dev) para Staging'
-          base: staging # Destino
+          base: staging # Destino pós commit na dev
           head: dev     # Origem
           # Garante que o PR seja atualizado, não duplicado
           update-branch: true
