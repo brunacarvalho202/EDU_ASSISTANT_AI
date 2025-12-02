@@ -1,0 +1,58 @@
+{
+    "family": "chat-assistant-task-def",
+    "containerDefinitions": [
+        {
+            "cpu": 0,
+            "environment": [],
+            "environmentFiles": [],
+            "essential": true,
+            "image": "388945960828.dkr.ecr.us-east-2.amazonaws.com/cloud/edu_chat@sha256:32256256fbb4489693545f33793bd330bd1c9bbda19e66eb6852ca2defc40326",
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/chat-assistant-task-def",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-east-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "mountPoints": [],
+            "name": "chat-assistant-container",
+            "portMappings": [
+                {
+                    "appProtocol": "http",
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "name": "fastapi_backend",
+                    "protocol": "tcp"
+                },
+                {
+                    "appProtocol": "http",
+                    "containerPort": 8501,
+                    "hostPort": 8501,
+                    "name": "streamlit_frontend",
+                    "protocol": "tcp"
+                }
+            ],
+            "systemControls": [],
+            "ulimits": [],
+            "volumesFrom": []
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::388945960828:role/TaskRole-Gemini-Reader",
+    "executionRoleArn": "arn:aws:iam::388945960828:role/TaskExecutionRole-Chat-ECS",
+    "networkMode": "awsvpc",
+    "volumes": [],
+    "placementConstraints": [],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "enableFaultInjection": false
+}

@@ -1,0 +1,87 @@
+name: 1. CI - Testes e PR para Staging
+
+on:
+  push:
+    branches:
+      - dev
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  run_tests_and_create_pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Ambiente Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Dependências
+        run: pip install -r requirements.txt
+
+      # ----------------------------------------------------
+      # RODAR TESTES UNITÁRIOS
+      # ----------------------------------------------------
+      - name: Rodar Testes Unitários
+        env:
+          RUN_INTEGRATION_TESTS: ''
+        run: |
+          echo "Rodando testes unitários (ignorando testes de integração)..."
+          pytest
+
+      # ----------------------------------------------------
+      # CRIAR PR DEV → STAGING
+      # ----------------------------------------------------
+      - name: Criar Pull Request para Staging
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
+          script: |
+            const headBranch = "dev";
+            const baseBranch = "staging";
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            const prTitle = "Merge automático: dev → staging";
+            const prBody = "PR criada automaticamente após testes passarem com sucesso.";
+
+            // 1. Verifica se PR já existe
+            const { data: prs } = await github.rest.pulls.list({
+              owner: repoOwner,
+              repo: repoName,
+              head: headBranch,
+              base: baseBranch,
+              state: "open"
+            });
+
+            if (prs.length > 0) {
+              console.log(`⚠️ PR ${prs[0].number} já existe. Não será criada novamente.`);
+              return;
+            }
+
+            // 2. Tenta criar uma nova PR
+            try {
+              const newPr = await github.rest.pulls.create({
+                owner: repoOwner,
+                repo: repoName,
+                title: prTitle,
+                head: headBranch,
+                base: baseBranch,
+                body: prBody
+              });
+
+              console.log(`✅ PR #${newPr.data.number} criada com sucesso: ${headBranch} → ${baseBranch}`);
+            } catch (error) {
+              if (error.status === 422) {
+                console.log(`ℹ️ Nenhuma mudança entre ${headBranch} e ${baseBranch}. PR não criada.`);
+              } else {
+                throw error;
+              }
+            }
