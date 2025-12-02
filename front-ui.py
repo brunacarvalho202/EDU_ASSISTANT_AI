@@ -3,7 +3,7 @@ import requests
 
 API_URL = "http://localhost:8000/chat"
 
-st.title("💬 Chat LLM (Local)")
+st.title("💬 EDU - Assistente estudantil")
 
 user_input = st.text_input("Digite sua mensagem:")
 
