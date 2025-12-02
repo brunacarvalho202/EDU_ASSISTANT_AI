@@ -5,11 +5,10 @@ on:
     branches:
       - dev
 
-# Permissões no nível do workflow (correto)
+# Permissões no nível do workflow (removido workflows: write)
 permissions:
   contents: write
   actions: read
-  workflows: write
 
 jobs:
   test_and_sync:
@@ -69,7 +68,7 @@ jobs:
         if: steps.sync.outputs.dispatch_required == 'true'
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
           script: |
             console.log("Disparando o Workflow 2...");
 
