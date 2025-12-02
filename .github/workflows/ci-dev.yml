@@ -1,64 +1,65 @@
-name: 1. CI - Testes e Sync dev → staging
+name: PR Automática - staging → master
 
 on:
-  push:
-    branches:
-      - dev
+  workflow_dispatch:
+    inputs:
+      message:
+        description: "Mensagem do CI"
+        required: false
+        default: "Atualização automática do staging"
 
-# ⛔ NÃO coloque permissions globais aqui, EXCETO SE usar workflows: write
 permissions:
-  workflows: write   # ✔️ obrigatório para permitir dispatch no Workflow 2
+  contents: read
+  pull-requests: write
 
 jobs:
-  test_and_sync:
+  create_pr:
     runs-on: ubuntu-latest
-    
-    # ✔️ As permissões normais ficam no job
-    permissions:
-      contents: write     # necessário para push
-      actions: read
 
     steps:
-      - name: Checkout Código
-        uses: actions/checkout@v4
+      - name: Criar PR automaticamente
+        uses: actions/github-script@v7
         with:
-          fetch-depth: 0
+          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
 
-      - name: Configurar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+            console.log("Verificando PR existente...");
 
-      - name: Instalar Dependências
-        run: pip install -r requirements.txt
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open"
+            });
 
-      - name: Rodar Testes Unitários
-        env:
-          RUN_INTEGRATION_TESTS: ''
-        run: pytest
+            const existing = prs.data.find(pr =>
+              pr.head.ref === "staging" && pr.base.ref === "master"
+            );
 
-      # ----------------------------------------
-      # DEV → STAGING
-      # ----------------------------------------
-      - name: Sync dev → staging
-        id: sync
-        if: success()
-        env:
-          PAT: ${{ secrets.PR_CREATOR_TOKEN }}
-        run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+            if (existing) {
+              console.log("PR já existe: #" + existing.number);
+              return;
+            }
 
-          git fetch origin --prune
-          git checkout staging
+            console.log("Criando nova PR...");
 
-          # 1. Verifica se staging já está atualizado
-          if git merge-base --is-ancestor origin/dev staging; then
-              echo "dispatch_required=false" >> $GITHUB_OUTPUT
-              exit 0
-          fi
+            try {
+              const pr = await github.rest.pulls.create({
+                owner,
+                repo,
+                head: "staging",
+                base: "master",
+                title: "Merge automático: staging → master",
+                body: context.payload.inputs?.message || "Atualização automática."
+              });
 
-          git merge origin/dev --no-ff -m "Merge automático dev → staging"
+              console.log("PR criada #" + pr.data.number);
 
-          # 2. Push com PAT
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.r
+            } catch (e) {
+              if (e.status === 422) {
+                console.log("Nenhuma mudança entre staging e master.");
+              } else {
+                throw e;
+              }
+            }
