@@ -1,75 +1,72 @@
 {
-    "family": "chat-assistant-task-def",
-    "containerDefinitions": [
+  "family": "chat-assistant-task-def",
+  "containerDefinitions": [
+    {
+      "cpu": 0,
+      "environment": [
         {
-            "cpu": 0,
-            
-            "environment": [
-                {
-                    "name": "LLM_PROVIDER",
-                    "value": "gemini"
-                },
-                {
-                    "name": "MODEL_NAME",
-                    "value": "models/gemini-2.5-flash" 
-                },
-                {
-                    "name": "ENV",
-                    "value": "production" 
-                }
-            ],
-            
-            "environmentFiles": [],
-            "essential": true,
-            "image": "placeholder",
-            "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                    "awslogs-group": "/ecs/chat-assistant-task-def",
-                    "awslogs-create-group": "true",
-                    "awslogs-region": "us-east-2",
-                    "awslogs-stream-prefix": "ecs"
-                },
-                "secretOptions": []
-            },
-            "mountPoints": [],
-            "name": "chat-assistant-container",
-            "portMappings": [
-                {
-                    "appProtocol": "http",
-                    "containerPort": 8000,
-                    "protocol": "tcp"
-                },
-                {
-                    "appProtocol": "http",
-                    "containerPort": 8501,
-                    "protocol": "tcp"
-                }
-            ],
-            "systemControls": [],
-            "ulimits": [],
-            "volumesFrom": [],
-            
-            "secrets": [
-                {
-                    "name": "GEMINI_API_KEY", 
-                    "valueFrom": "arn:aws:secretsmanager:us-east-2:388945960828:secret:chat-assistant-api-key-PhcR9c"
-                }
-            ]
+          "name": "LLM_PROVIDER",
+          "value": "gemini"
+        },
+        {
+          "name": "MODEL_NAME",
+          "value": "models/gemini-2.5-flash"
+        },
+        {
+          "name": "ENV",
+          "value": "production"
         }
-    ],
-    "taskRoleArn": "arn:aws:iam::388945960828:role/TaskRole-Gemini-Reader",
-    "executionRoleArn": "arn:aws:iam::388945960828:role/TaskExecutionRole-Chat-ECS",
-    "networkMode": "awsvpc",
-    "volumes": [],
-    "placementConstraints": [],
-    "requiresCompatibilities": [
-        "FARGATE"
-    ],
-    "cpu": "1024",
-    "memory": "3072",
-    "runtimePlatform": {
-        "cpuArchitecture": "X86_64",
-        "operatingSystemFamily": "LINUX"
+      ],
+      "environmentFiles": [],
+      "essential": true,
+      "image": "placeholder",
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/chat-assistant-task-def",
+          "awslogs-create-group": "true",
+          "awslogs-region": "us-east-2",
+          "awslogs-stream-prefix": "ecs"
+        },
+        "secretOptions": []
+      },
+      "mountPoints": [],
+      "name": "chat-assistant-container",
+      "portMappings": [
+        {
+          "appProtocol": "http",
+          "containerPort": 8000,
+          "protocol": "tcp"
+        },
+        {
+          "appProtocol": "http",
+          "containerPort": 8501,
+          "protocol": "tcp"
+        }
+      ],
+      "systemControls": [],
+      "ulimits": [],
+      "volumesFrom": [],
+      "secrets": [
+        {
+          "name": "GEMINI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-2:388945960828:secret:chat-assistant-api-key-PhcR9c"
+        }
+      ]
     }
+  ],
+  "taskRoleArn": "arn:aws:iam::388945960828:role/TaskRole-Gemini-Reader",
+  "executionRoleArn": "arn:aws:iam::388945960828:role/TaskExecutionRole-Chat-ECS",
+  "networkMode": "awsvpc",
+  "volumes": [],
+  "placementConstraints": [],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "3072",
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  }
 }
