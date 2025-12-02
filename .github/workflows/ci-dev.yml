@@ -11,9 +11,9 @@ jobs:
     
     # Define permissões no nível do job para evitar erros de sintaxe (como o 'Unexpected value workflows')
     permissions:
-      contents: write     # Necessário para Checkout e para fazer o push com PAT
+      contents: write # Necessário para Checkout e para fazer o push com PAT
       actions: read
-      workflows: write   # CRUCIAL para disparar o Workflow 2
+      workflows: write # CRUCIAL para disparar o Workflow 2
 
     steps:
       - name: Checkout Código
