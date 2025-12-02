@@ -29,7 +29,7 @@ def get_gemini_api_key_from_secret() -> str | None:
         if not gemini_key:
             print(f"ERRO: Chave 'GEMINI_API_KEY' não encontrada no JSON do Secret Manager.")
             return None
-        return gemini_key
+        return gemini_key.strip()
 
     except Exception as e:
         print(f"AVISO: Não foi possível obter Secret Manager. Presumindo ambiente LOCAL. Erro: {e}")
