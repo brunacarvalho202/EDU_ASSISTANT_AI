@@ -46,8 +46,8 @@ class Settings(BaseSettings):
 # Instância base (puxa tudo que é variável de ambiente)
 settings = Settings()
 
-# Se a chave foi fornecida localmente via .env, usa ela.
-# Se não, tenta puxar do Secrets Manager (só funciona na nuvem)
+# Se a chave foi fornecida localmente via .env, uss ela.
+# Se não, tentamos puxar do Secrets Manager (só funciona na nuvem)
 if settings.GEMINI_API_KEY is None:
     # 1. Tenta Secrets Manager (só funcionará no App Runner com a IAM Role)
     aws_key = get_gemini_api_key_from_secret()
