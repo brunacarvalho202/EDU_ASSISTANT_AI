@@ -1,22 +1,24 @@
 name: 1. CI - Testes e Sync dev → staging
+
 on:
   push:
     branches:
       - dev
 
-permissions:
-  # 🚨 MUDANÇA 2: Adicionamos 'workflows: write' para permitir que este workflow chame outros
-  contents: write
-  actions: read
-  workflows: write
+# 🚨 A SEÇÃO 'permissions' GLOBAL FOI REMOVIDA PARA EVITAR O ERRO
+# As permissões foram movidas para dentro do job (abaixo).
 
 jobs:
   test_and_sync:
     runs-on: ubuntu-latest
+    
+    # ✅ PERMISSÕES MOVIDAS PARA O NÍVEL DO JOB
+    permissions:
+      contents: write     # Necessário para o checkout e o push para staging
+      actions: read
+      workflows: write   # CRUCIAL para disparar o Workflow 2 (Dispatch)
 
     steps:
-      # ... (Steps de Checkout, Python, Instalar Dependências e Testes - SEM MUDANÇA) ...
-      
       - name: Checkout Código
         uses: actions/checkout@v4
         with:
@@ -50,7 +52,7 @@ jobs:
           git fetch origin --prune
           git checkout staging
           
-          # Verificar se há algo para mergear antes de fazer o push
+          # 1. Verifica se há algo para mergear
           if git merge-base --is-ancestor origin/dev staging; then
               echo "A branch staging já inclui todas as alterações de dev. Pulando merge e dispatch."
               echo "dispatch_required=false" >> $GITHUB_OUTPUT
@@ -59,22 +61,21 @@ jobs:
           
           git merge origin/dev --no-ff -m "Merge automático dev → staging"
 
-          # --- PUSH usando PAT (habilita o dispatch do workflow) ---
+          # 2. PUSH usando PAT
           git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}
           git push origin staging
           
-          # Se o push ocorreu, precisamos do dispatch
+          # 3. Sinaliza que o push ocorreu e o dispatch é necessário
           echo "dispatch_required=true" >> $GITHUB_OUTPUT
         
       # ----------------------------------------------------
-      # 🚨 MUDANÇA 3: CHAMA O WORKFLOW 2 DIRETAMENTE (DISPATCH)
+      # CHAMA O WORKFLOW 2 DIRETAMENTE (DISPATCH)
       # ----------------------------------------------------
       - name: Disparar Workflow 2 (PR staging → master)
-        # Só dispara se o push realimente aconteceu (output 'dispatch_required' for 'true')
         if: steps.sync.outputs.dispatch_required == 'true'
         uses: actions/github-script@v7
         with:
-          # Usamos o GITHUB_TOKEN padrão, que tem permissão para disparar workflows no repositório
+          # Usamos o GITHUB_TOKEN padrão
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             console.log("Disparando o Workflow 2...");
@@ -82,7 +83,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              # O nome do arquivo YAML do Workflow 2
+              # O nome exato do arquivo YAML do Workflow 2
               workflow_id: '2. PR Automática - staging → master.yml', 
               ref: 'staging',
               inputs: {
