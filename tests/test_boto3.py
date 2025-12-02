@@ -1,75 +1,44 @@
-import unittest
-import os
+import boto3
 import json
-from unittest.mock import patch, MagicMock
+import os
+from botocore.exceptions import ClientError
 
-# Ajuste o caminho de importação conforme a estrutura do seu projeto
-# O caminho correto deve ser: pasta_principal.pasta_app.pasta_core.nome_do_arquivo
-from app.core.aws_secrets import get_gemini_api_key_from_secret
+SECRET_NAME = "gemini_api_secret_name"
 
-# --- Variáveis para Simulação (Mock) ---
-# O valor que esperamos que a chave Gemini tenha
-TEST_SECRET_VALUE = "MY_TEST_GEMINI_KEY_12345" 
-# O JSON simulado que o Secrets Manager retornaria
-TEST_SECRET_JSON = json.dumps({"GEMINI_API_KEY": TEST_SECRET_VALUE})
+# A região onde o Secret está armazenado (deve ser a mesma do seu Fargate)
+REGION_NAME = "us-east-2"
 
-
-class SecretsManagerTest(unittest.TestCase):
-    # --- Teste de Lógica: Verifica se o código extrai o valor corretamente ---
-    def test_secret_value_extraction(self):
-        """
-        Testa se o código extrai corretamente a chave 'GEMINI_API_KEY'
-        da string JSON retornada pelo Secrets Manager.
-        """
-        # 1. Simular o cliente do Secrets Manager
-        mock_client = MagicMock()
-        mock_client.get_secret_value.return_value = {
-            'SecretString': TEST_SECRET_JSON
-        }
-
-        # 2. Substituir a chamada real do boto3 pela simulação (mock)
-        with patch('boto3.session.Session.client', return_value=mock_client) as mock_boto_client:
-            
-            # 3. Chamar a função
-            key = get_gemini_api_key_from_secret()
-
-            # 4. Verificar o resultado esperado
-            self.assertEqual(key, TEST_SECRET_VALUE)
-            
-            # 5. Verificação de chamada opcional: se o cliente foi chamado
-            mock_boto_client.assert_called_once()
-
-
-# --- Teste de Conexão REAL (Requer chaves AWS no terminal) ---
-def run_real_connection_test():
+def get_gemini_api_key_from_secret():
     """
-    Tenta uma conexão real com o AWS Secrets Manager para verificar a autenticação.
+    Busca e extrai a chave da API Gemini do AWS Secrets Manager.
     """
-    print("\n--- TESTE DE CONEXÃO REAL DA AWS ---")
-    
-    # ⚠️ Certifique-se de que o Secret 'chat-assistant-api-key' existe na região 'us-east-2'
-    # e que suas credenciais estão definidas no terminal (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY).
-    
     try:
-        real_key = get_gemini_api_key_from_secret()
-        print(f"✅ SUCESSO! Chave Gemini REAL buscada. (Primeiros 5 caracteres: {real_key[:5]})")
-        print("A autenticação do boto3 está funcionando corretamente no ambiente local.")
-        return True
-    except EnvironmentError as e:
-        print(f"❌ ERRO CRÍTICO DE CONEXÃO: {e}")
-        print("A autenticação do boto3 FALHOU. Verifique se:")
-        print("1. O Secret 'chat-assistant-api-key' existe na região 'us-east-2'.")
-        print("2. As variáveis AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY estão definidas no seu terminal.")
-        return False
+        # 1. Cria a sessão do Boto3. O cliente do teste unitário simula esta chamada.
+        session = boto3.session.Session()
+        client = session.client(
+            service_name='secretsmanager',
+            region_name=REGION_NAME
+        )
+        
+        # 2. Obtém o valor do secret
+        get_secret_value_response = client.get_secret_value(
+            SecretId=SECRET_NAME
+        )
+        
+    except ClientError as e:
+        print(f"Erro ao acessar Secrets Manager: {e}")
+        return None # Retorna None em caso de falha de conexão ou permissão
 
-
-if __name__ == '__main__':
-    # Primeiro, rodamos o teste de conexão real
-    if run_real_connection_test():
-        print("\n--- Testes Unitários de Lógica (Com Mocks) ---")
-        # Se a conexão real funcionar, rodamos os testes de lógica
-        unittest.main()
-    else:
-        # Se a conexão real falhar, podemos rodar os testes unitários de qualquer forma para validar a lógica
-        # mas a aplicação falhará no Fargate por falta de acesso.
-        print("\nO teste de conexão real FALHOU. Corrija as credenciais antes do push.")
+    # 3. Processamento do valor retornado
+    if 'SecretString' in get_secret_value_response:
+        secret = get_secret_value_response['SecretString']
+        # Desserializa a string JSON para um dicionário Python
+        secret_dict = json.loads(secret)
+        
+        # 4. Retorna o valor da chave específica
+        if 'GEMINI_API_KEY' in secret_dict:
+            return secret_dict['GEMINI_API_KEY']
+        
+    # Caso o formato esteja incorreto ou a chave não exista
+    print("Erro: Chave 'GEMINI_API_KEY' não encontrada no Secret, ou Secret String não fornecida.")
+    return None

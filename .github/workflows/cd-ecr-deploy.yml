@@ -1,0 +1,93 @@
+#(CD : Staging -> Main)
+#Este arquivo é responsável pela Entrega Contínua (CD). 
+#Ele é acionado quando o código é mesclado na main, constrói a imagem, salva no ECR e atualiza o ECS.
+
+# Caminho: .github/workflows/cd-ecr-deploy.yml
+name: 2. CD - Imagem e Deploy para Main
+
+# Este workflow é acionado somente quando o código é mesclado (merge) na branch 'main'
+on:
+  push:
+    branches:
+      - main
+
+# Define as variáveis do ambiente de Produção
+env:
+  ECS_CLUSTER_NAME: chat-edu-assistant-cluster
+  ECS_SERVICE_NAME: chat-assistant-service
+  ECS_TASK_DEFINITION: task-definition.json
+  ECS_CONTAINER_NAME: chat-assistant-container # Nome do container dentro da Task Definition
+
+jobs:
+  build_push_and_deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------
+      # 1. Configurar AWS e ECR Login
+      # ----------------------------------------------------
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # É altamente recomendado usar um IAM Role para OpenID Connect (OIDC) em vez de chaves.
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }} # Use uma região específica (ex: us-east-2)
+
+      - name: Login no Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - name: Definir Variáveis de Imagem e Tags
+        id: vars
+        run: |
+          REPOSITORY=${{ secrets.ECR_REPOSITORY }}
+          # Tag única com o SHA do commit
+          IMAGE_SHA_TAG=${{ github.sha }}
+          # URI Completa da imagem com a tag SHA
+          ECR_URI_SHA=${{ steps.login-ecr.outputs.registry }}/$REPOSITORY:$IMAGE_SHA_TAG
+          
+          echo "ECR_URI_SHA=$ECR_URI_SHA" >> $GITHUB_OUTPUT
+          
+          # Define a Tag 'latest' também
+          ECR_URI_LATEST=${{ steps.login-ecr.outputs.registry }}/$REPOSITORY:latest
+          echo "ECR_URI_LATEST=$ECR_URI_LATEST" >> $GITHUB_OUTPUT
+
+      # ----------------------------------------------------
+      # 2. Build e Push para ECR
+      # ----------------------------------------------------
+      - name: Build e Push da Imagem
+        env:
+          ECR_URI_SHA: ${{ steps.vars.outputs.ECR_URI_SHA }}
+          ECR_URI_LATEST: ${{ steps.vars.outputs.ECR_URI_LATEST }}
+        run: |
+          # Build da imagem com duas tags (SHA e latest)
+          docker build -t $ECR_URI_SHA -t $ECR_URI_LATEST .
+          
+          # Push de ambas as tags
+          echo "Pushing $ECR_URI_SHA"
+          docker push $ECR_URI_SHA
+          echo "Pushing $ECR_URI_LATEST"
+          docker push $ECR_URI_LATEST
+          
+      # ----------------------------------------------------
+      # 3. Deploy no ECS (Atualizar Serviço)
+      # ----------------------------------------------------
+      - name: Renderizar Nova Task Definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json # Arquivo Task Definition local
+          container-name: ${{ env.ECS_CONTAINER_NAME }} # Nome do container para atualização
+          image: ${{ steps.vars.outputs.ECR_URI_SHA }} # Usa a tag SHA para garantir unicidade
+
+      - name: Deploy no Serviço ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_NAME }}
+          cluster: ${{ env.ECS_CLUSTER_NAME }}
+          # IMPORTANTE: Espera a estabilidade para garantir que o deploy foi bem-sucedido
+          wait-for-service-stability: true

@@ -5,14 +5,12 @@ import json
 import boto3
 from dotenv import load_dotenv
 
-# O nome do Secret que você criou na AWS
+# O nome do Secret da AWS
 AWS_SECRET_NAME = "chat-assistant-api-key" 
 
 def get_gemini_api_key_from_secret() -> str | None:
     """Busca a GEMINI_API_KEY do AWS Secrets Manager, usando a IAM Role do App Runner."""
-    
-    # A região da AWS é crucial para o Boto3. Usamos a região onde o App Runner está rodando.
-    # Usar 'sa-east-1' como padrão, se não estiver no ambiente.
+
     region_name = os.environ.get("AWS_REGION", "us-east-2") 
     
     # Se estiver em desenvolvimento local, evitamos falhar no Boto3

@@ -5,13 +5,11 @@ import os
 import json
 import boto3
 
-# O nome do Secret que você criou na AWS
 AWS_SECRET_NAME = "chat-assistant-api-key" 
 
 def get_gemini_api_key_from_secret() -> str:
     """Busca a GEMINI_API_KEY do AWS Secrets Manager."""
     
-    # Define a região (App Runner injeta isso, mas é bom ter um padrão)
     region_name = os.environ.get("AWS_REGION", "us_east-2") 
     
     session = boto3.session.Session()

@@ -10,11 +10,10 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
 import os
-from dotenv import load_dotenv # Adicionado para desenvolvimento local
-from app.core.aws_secrets import get_gemini_api_key_from_secret # NOVO IMPORT!
+from dotenv import load_dotenv
+from app.core.aws_secrets import get_gemini_api_key_from_secret
 
 # --- 1. Carregar Variáveis Locais para DEV ---
-# Isso só funciona se estiver rodando o script localmente, não no App Runner.
 load_dotenv() 
 
 class Settings(BaseSettings):
@@ -36,20 +35,19 @@ class Settings(BaseSettings):
         description="Modelo padrão do provedor escolhido"
     )
 
-    # NOVO: Variável da API Key será resolvida pela lógica de nuvem/local
+    #Variável da API Key será resolvida pela lógica de nuvem/local
     GEMINI_API_KEY: str | None = None
 
     CORS_ORIGINS: List[str] = ["*"]
 
-    # Removemos o 'class Config' que referencia o .env
 
 # --- 2. Lógica de Resolução da Chave ---
 
 # Instância base (puxa tudo que é variável de ambiente)
 settings = Settings()
 
-# Se a chave foi fornecida localmente via .env, usamos ela.
-# Se não, tentamos puxar do Secrets Manager (só funciona na nuvem)
+# Se a chave foi fornecida localmente via .env, usa ela.
+# Se não, tenta puxar do Secrets Manager (só funciona na nuvem)
 if settings.GEMINI_API_KEY is None:
     # 1. Tenta Secrets Manager (só funcionará no App Runner com a IAM Role)
     aws_key = get_gemini_api_key_from_secret()
