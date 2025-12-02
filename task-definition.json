@@ -33,7 +33,14 @@
             ],
             "systemControls": [],
             "ulimits": [],
-            "volumesFrom": []
+            "volumesFrom": [],
+            
+            "secrets": [
+                {
+                    "name": "GEMINI_API_KEY", 
+                    "valueFrom": "arn:aws:secretsmanager:us-east-2:388945960828:secret:chat-assistant-api-key-PhcR9c"
+                }
+            ]
         }
     ],
     "taskRoleArn": "arn:aws:iam::388945960828:role/TaskRole-Gemini-Reader",
