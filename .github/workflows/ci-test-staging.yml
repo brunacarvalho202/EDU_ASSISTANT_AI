@@ -1,0 +1,56 @@
+#CI : Dev -> Staging
+#Este arquivo é responsável pela Integração Contínua (CI). 
+#Ele garante que as mudanças em dev funcionem e as promove para o ambiente de testes (staging)
+
+# Caminho: .github/workflows/ci-test-staging.yml
+name: 1. CI - Testes e PR para Staging
+
+# Este workflow é acionado em todo push na branch 'dev'
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  run_tests_and_create_pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Ambiente Python
+        uses: actions/setup-python@v5
+        with:
+          # Python 3.11 é o mais comum para containers
+          python-version: '3.11'
+          
+      - name: Instalar Dependências
+        run: pip install -r requirements.txt
+
+      # ----------------------------------------------------
+      # CORREÇÃO CRUCIAL: Variável de ambiente na chave 'env'
+      # ----------------------------------------------------
+      - name: Rodar Testes Unitários
+        # AJUSTE AQUI: Mudamos de 'false' para string vazia ''.
+        # Isso força o Python a interpretar o valor como 'False' (falsy) para que o skipif seja 'True'.
+        env:
+          RUN_INTEGRATION_TESTS: ''
+        run: |
+          echo "Rodando testes unitários (ignorando testes de integração)..."
+          pytest
+        # O GitHub Actions falhará neste passo se o pytest retornar um código de erro (testes falhados).
+
+      # ----------------------------------------------------
+      # PR para Staging (Só roda se os testes passarem!)
+      # ----------------------------------------------------
+      - name: Criar Pull Request para Staging
+        # Esta etapa só será alcançada se o passo anterior ('Rodar Testes Unitários') for bem-sucedido.
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'Merge de dev para staging: Nova feature pronta para code review'
+          title: 'Merge de Feature (dev) para Staging'
+          base: staging # Destino
+          head: dev     # Origem
+          # Garante que o PR seja atualizado, não duplicado
+          update-branch: true
