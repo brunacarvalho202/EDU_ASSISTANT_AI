@@ -5,18 +5,14 @@ on:
     branches:
       - dev
 
-# 🚨 A SEÇÃO 'permissions' GLOBAL FOI REMOVIDA PARA EVITAR O ERRO
-# As permissões foram movidas para dentro do job (abaixo).
-
 jobs:
   test_and_sync:
     runs-on: ubuntu-latest
     
-    # ✅ PERMISSÕES MOVIDAS PARA O NÍVEL DO JOB
     permissions:
-      contents: write     # Necessário para o checkout e o push para staging
+      contents: write     # Necessário para checkout + push
       actions: read
-      workflows: write   # CRUCIAL para disparar o Workflow 2 (Dispatch)
+      workflows: write    # NECESSÁRIO para disparar o Workflow 2 via dispatch
 
     steps:
       - name: Checkout Código
@@ -51,43 +47,42 @@ jobs:
 
           git fetch origin --prune
           git checkout staging
-          
-          # 1. Verifica se há algo para mergear
+
+          echo "🔍 Verificando se há commits novos no dev..."
           if git merge-base --is-ancestor origin/dev staging; then
-              echo "A branch staging já inclui todas as alterações de dev. Pulando merge e dispatch."
+              echo "A branch staging já tem todos os commits de dev."
               echo "dispatch_required=false" >> $GITHUB_OUTPUT
               exit 0
           fi
-          
+
+          echo "🔄 Fazendo merge dev → staging..."
           git merge origin/dev --no-ff -m "Merge automático dev → staging"
 
-          # 2. PUSH usando PAT
+          echo "⬆️ Enviando staging para o repositório..."
           git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}
           git push origin staging
-          
-          # 3. Sinaliza que o push ocorreu e o dispatch é necessário
+
           echo "dispatch_required=true" >> $GITHUB_OUTPUT
-        
+
       # ----------------------------------------------------
-      # CHAMA O WORKFLOW 2 DIRETAMENTE (DISPATCH)
+      # DISPARA O WORKFLOW 2
       # ----------------------------------------------------
       - name: Disparar Workflow 2 (PR staging → master)
         if: steps.sync.outputs.dispatch_required == 'true'
         uses: actions/github-script@v7
         with:
-          # Usamos o GITHUB_TOKEN padrão
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            console.log("Disparando o Workflow 2...");
-            
+            console.log("🚀 Disparando o Workflow 2...");
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              # O nome exato do arquivo YAML do Workflow 2
-              workflow_id: '2. PR Automática - staging → master.yml', 
+              workflow_id: 'pr-staging-to-master.yml',   // <<< AQUI O NOME CORRETO
               ref: 'staging',
               inputs: {
                 message: 'PR acionada automaticamente após merge dev -> staging.'
               }
             });
-            console.log("Workflow 2 disparado com sucesso!");
+
+            console.log("✅ Workflow 2 disparado com sucesso!");

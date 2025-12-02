@@ -1,10 +1,8 @@
 name: 2. PR Automática - staging → master
 
-# 🚨 MUDANÇA 1: Muda o trigger para que o Workflow 1 possa chamá-lo
 on:
   workflow_dispatch:
     inputs:
-      # Um input opcional para carregar informações
       message:
         description: 'Mensagem do commit que acionou o sync'
         required: false
@@ -17,46 +15,55 @@ permissions:
 jobs:
   create_pr:
     runs-on: ubuntu-latest
+
     steps:
       - name: Criar PR para master
         uses: actions/github-script@v7
         with:
-          # O PAT ainda é necessário para criar o PR
-          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
+          github-token: ${{ secrets.PR_CREATOR_TOKEN }}  # Necessário para criar PR
           script: |
-            // ... (O código JavaScript Octokit original para criar PR permanece o mesmo)
-            const head = "staging";
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const head = `${owner}:staging`;
             const base = "master";
-            
-            // O código permanece o mesmo. O script do passo anterior já garantiu o merge.
+
+            console.log("🔍 Verificando se já existe PR aberta staging → master...");
 
             const prs = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head,
-              base,
+              owner,
+              repo,
               state: "open"
             });
 
-            if (prs.length > 0) {
-              console.log("PR já existe");
+            const existing = prs.data.find(pr =>
+              pr.head.ref === "staging" && pr.base.ref === "master"
+            );
+
+            if (existing) {
+              console.log(`⚠️ PR já existe: #${existing.number}`);
               return;
             }
 
+            console.log("🆕 Nenhuma PR aberta. Criando nova PR...");
+
             try {
               const pr = await github.rest.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 title: "Merge automático: staging → master",
-                body: "PR criada automaticamente após atualização em staging.",
-                head,
-                base
+                body: context.payload.inputs?.message || "PR criada automaticamente após atualização em staging.",
+                head: "staging",
+                base: "master"
               });
-              console.log("PR criada #" + pr.data.number);
+
+              console.log(`✅ PR criada com sucesso! #${pr.data.number}`);
+
             } catch (e) {
               if (e.status === 422) {
-                console.log("Nenhuma mudança entre staging e master.");
+                console.log("⚠️ Nenhuma mudança entre staging e master.");
               } else {
+                console.error("❌ Erro ao criar PR:", e);
                 throw e;
               }
             }
