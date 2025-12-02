@@ -9,7 +9,7 @@ name: 2. CD - Imagem e Deploy para Main
 on:
   push:
     branches:
-      - main
+      - master
 
 # Define as variáveis do ambiente de Produção
 env:
