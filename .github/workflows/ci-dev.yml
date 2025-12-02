@@ -5,21 +5,20 @@ on:
     branches:
       - dev
 
+# Permissões no nível do workflow (correto)
+permissions:
+  contents: write
+  actions: read
+  workflows: write
+
 jobs:
   test_and_sync:
     runs-on: ubuntu-latest
-    
-    # Define permissões no nível do job para evitar erros de sintaxe (como o 'Unexpected value workflows')
-    permissions:
-      contents: write
-      actions: read
-      workflows: write
 
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
         with:
-          # Necessário para operações de merge
           fetch-depth: 0
 
       - name: Configurar Python
@@ -32,7 +31,6 @@ jobs:
 
       - name: Rodar Testes Unitários
         env:
-          # Mantido o uso da string vazia, conforme solicitado
           RUN_INTEGRATION_TESTS: ''
         run: pytest
 
@@ -43,31 +41,27 @@ jobs:
         id: sync
         if: success()
         env:
-          # Usa o PAT para a autenticação do push (permite o push na branch protegida)
           PAT: ${{ secrets.PR_CREATOR_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          # 1. Verifica se há algo novo para mergear
           git fetch origin --prune
+
           if git merge-base --is-ancestor origin/dev staging; then
               echo "A branch staging já inclui todas as alterações de dev. Pulando merge e dispatch."
               echo "dispatch_required=false" >> $GITHUB_OUTPUT
               exit 0
           fi
-          
-          # 2. Faz o merge em staging
+
           git checkout staging
           git merge origin/dev --no-ff -m "Merge automático dev → staging"
 
-          # 3. PUSH usando PAT (necessário para o push, mas que não aciona workflows automaticamente)
           git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}
           git push origin staging
-          
-          # 4. Sinaliza que o push ocorreu
+
           echo "dispatch_required=true" >> $GITHUB_OUTPUT
-        
+
       # ----------------------------------------------------
       # 2. DISPARAR WORKFLOW 2 (PR staging → master)
       # ----------------------------------------------------
@@ -75,19 +69,18 @@ jobs:
         if: steps.sync.outputs.dispatch_required == 'true'
         uses: actions/github-script@v7
         with:
-          # Usa o GITHUB_TOKEN padrão, que tem permissão para disparar workflows
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             console.log("Disparando o Workflow 2...");
-            
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              # O nome exato do arquivo YAML do Workflow 2
-              workflow_id: 'pr-staging-to-master.yml', 
+              workflow_id: 'pr-staging-to-master.yml',
               ref: 'staging',
               inputs: {
                 message: 'PR acionada automaticamente após merge dev -> staging.'
               }
             });
+
             console.log("Workflow 2 disparado com sucesso!");
