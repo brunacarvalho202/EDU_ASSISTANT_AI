@@ -17,7 +17,7 @@ jobs:
       - name: Checkout Código
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0    # <<< IMPORTANTE para evitar "unrelated histories"
+          fetch-depth: 0
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -37,6 +37,8 @@ jobs:
       # ----------------------------------------------------
       - name: Sync dev → staging
         if: success()
+        env:
+          PAT: ${{ secrets.PR_CREATOR_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -44,4 +46,7 @@ jobs:
           git fetch origin --prune
           git checkout staging
           git merge origin/dev --no-ff -m "Merge automático dev → staging"
+
+          # --- PUSH usando PAT (habilita workflow 2) ---
+          git remote set-url origin https://x-access-token:${PAT}@github.com/${{ github.repository }}
           git push origin staging
