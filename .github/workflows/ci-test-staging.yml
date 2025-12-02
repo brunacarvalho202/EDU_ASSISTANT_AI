@@ -5,9 +5,11 @@ on:
     branches:
       - dev
 
+# Mantemos a permissão de pull-requests: write no job,
+# mas usamos o PAT na step para o acesso com privilégio
 permissions:
-  contents: write       # necessário para ler código / commits
-  pull-requests: write  # necessário para criar PR
+  contents: read       # Para Checkout
+  pull-requests: write # Permissão base para o GITHUB_TOKEN no Job
   actions: read
 
 jobs:
@@ -26,55 +28,68 @@ jobs:
       - name: Instalar Dependências
         run: pip install -r requirements.txt
 
+      ---
+      
       # ----------------------------------------------------
       # RODAR TESTES UNITÁRIOS
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
         env:
-          RUN_INTEGRATION_TESTS: ''  # vazio = falsy = pula integração
+          # ✅ Mantido o uso da string vazia, conforme solicitado
+          RUN_INTEGRATION_TESTS: ''  # string vazia = falsy = pula integração
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
           pytest
 
+      ---
+
       # ----------------------------------------------------
-      # CRIAR PR DEV → STAGING (FORMA CORRETA)
+      # CRIAR PR DEV → STAGING (CORREÇÃO DE PERMISSÃO APLICADA)
       # ----------------------------------------------------
       - name: Criar Pull Request para Staging
-        if: success()   # só executa se os testes passarem
+        if: success()   # só executa se os testes passarem
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # 🚨 CORREÇÃO DE ERRO: Usamos o PAT (PR_CREATOR_TOKEN) para ter permissão de criar PRs
+          github-token: ${{ secrets.PR_CREATOR_TOKEN }}
           script: |
-            // Verifica se PR já existe
+            const headBranch = "dev";
+            const baseBranch = "staging";
+            const repoOwner = context.repo.owner;
+            const repoName = context.repo.repo;
+            const prTitle = "Merge automático: dev → staging";
+            const prBody = "PR criada automaticamente após testes passarem com sucesso.";
+
+            // 1. Verifica se PR já existe
             const { data: prs } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              head: context.repo.owner + ":dev",
-              base: "staging",
+              owner: repoOwner,
+              repo: repoName,
+              head: headBranch,
+              base: baseBranch,
               state: "open"
             });
 
             if (prs.length > 0) {
-              console.log("⚠️ PR já existe. Não será criada novamente.");
+              console.log(`⚠️ PR ${prs[0].number} já existe. Não será criada novamente.`);
               return;
             }
 
-            // Tenta criar uma nova PR
+            // 2. Tenta criar uma nova PR
             try {
-              await github.rest.pulls.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title: "Merge automático: dev → staging",
-                head: "dev",
-                base: "staging",
-                body: "PR criada automaticamente após testes passarem com sucesso."
+              const newPr = await github.rest.pulls.create({
+                owner: repoOwner,
+                repo: repoName,
+                title: prTitle,
+                head: headBranch,
+                base: baseBranch,
+                body: prBody
               });
 
-              console.log("✅ PR criada com sucesso: dev → staging");
+              console.log(`✅ PR #${newPr.data.number} criada com sucesso: ${headBranch} → ${baseBranch}`);
 
             } catch (error) {
               if (error.status === 422) {
-                console.log("ℹ️ Nenhuma mudança entre dev e staging. PR não criada.");
+                console.log(`ℹ️ Nenhuma mudança entre ${headBranch} e ${baseBranch}. PR não criada.`);
               } else {
                 throw error;
               }
