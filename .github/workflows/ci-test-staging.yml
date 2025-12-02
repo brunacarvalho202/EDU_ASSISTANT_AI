@@ -1,6 +1,5 @@
 name: 1. CI - Testes e PR para Staging
 
-# Este workflow é acionado em todo push na branch 'dev'
 on:
   push:
     branches:
@@ -9,6 +8,7 @@ on:
 jobs:
   run_tests_and_create_pr:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
@@ -16,33 +16,56 @@ jobs:
       - name: Configurar Ambiente Python
         uses: actions/setup-python@v5
         with:
-          # Python 3.11 é o mais comum para containers
           python-version: '3.11'
           
       - name: Instalar Dependências
         run: pip install -r requirements.txt
 
       # ----------------------------------------------------
-      # NOVO: Rodar Testes Unitários
+      # RODAR TESTES UNITÁRIOS
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
-        # Garante que o teste de integração seja pulado (string vazia é Falsy no Python)
         env:
-          RUN_INTEGRATION_TESTS: ''
+          RUN_INTEGRATION_TESTS: ''  # vazio = falsy = pula integração
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
           pytest
 
       # ----------------------------------------------------
-      # PR para Staging (CORRIGIDO: Removido 'head' e 'update-branch')
+      # CRIAR PR DEV → STAGING (FORMA CORRETA)
       # ----------------------------------------------------
       - name: Criar Pull Request para Staging
-        # Esta etapa só será alcançada se o passo anterior ('Rodar Testes Unitários') for bem-sucedido.
-        uses: peter-evans/create-pull-request@v6
+        if: success()   # só executa se os testes passarem
+        uses: actions/github-script@v7
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'Merge de dev para staging: Nova feature pronta para code review'
-          title: 'Merge de Feature (dev) para Staging'
-          base: staging # Destino (Correto: onde as mudanças vão)
-          # A branch de origem (head) 'dev' é inferida automaticamente,
-          # e o 'update-branch' agora é o comportamento padrão
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: prs } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: context.repo.owner + ":dev",
+              base: "staging",
+              state: "open"
+            });
+
+            if (prs.length > 0) {
+              console.log("PR já existe. Não será criada novamente.");
+              return;
+            }
+
+            try {
+              await github.rest.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "Merge automático: dev → staging",
+                head: "dev",
+                base: "staging",
+                body: "PR criada automaticamente após testes passarem com sucesso."
+              });
+            } catch (error) {
+              if (error.status === 422) {
+                console.log("Nenhuma mudança entre dev e staging. PR não criada.");
+              } else {
+                throw error;
+              }
+            }
