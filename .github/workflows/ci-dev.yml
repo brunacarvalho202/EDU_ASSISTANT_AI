@@ -8,7 +8,7 @@ permissions:
   # 🚨 MUDANÇA 2: Adicionamos 'workflows: write' para permitir que este workflow chame outros
   contents: write
   actions: read
-  workflows: write 
+  workflows: write
 
 jobs:
   test_and_sync:
