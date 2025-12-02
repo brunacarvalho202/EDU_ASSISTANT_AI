@@ -3,7 +3,22 @@
     "containerDefinitions": [
         {
             "cpu": 0,
-            "environment": [],
+            
+            "environment": [
+                {
+                    "name": "LLM_PROVIDER",
+                    "value": "gemini"
+                },
+                {
+                    "name": "MODEL_NAME",
+                    "value": "models/gemini-2.5-flash" 
+                },
+                {
+                    "name": "ENV",
+                    "value": "production" 
+                }
+            ],
+            
             "environmentFiles": [],
             "essential": true,
             "image": "placeholder",
