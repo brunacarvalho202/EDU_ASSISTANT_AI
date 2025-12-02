@@ -31,11 +31,10 @@ jobs:
       # CORREÇÃO CRUCIAL: Variável de ambiente na chave 'env'
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
-        # DEFINIMOS A VARIÁVEL DE AMBIENTE AQUI.
-        # Isso garante que a variável RUN_INTEGRATION_TESTS seja lida como 'false' pelo pytest,
-        # pulando o teste de conexão com a AWS/Gemini no ambiente de CI.
+        # AJUSTE AQUI: Mudamos de 'false' para string vazia ''.
+        # Isso força o Python a interpretar o valor como 'False' (falsy) para que o skipif seja 'True'.
         env:
-          RUN_INTEGRATION_TESTS: false
+          RUN_INTEGRATION_TESTS: ''
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
           pytest
