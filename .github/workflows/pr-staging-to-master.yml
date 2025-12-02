@@ -1,9 +1,14 @@
 name: 2. PR Automática - staging → master
 
+# 🚨 MUDANÇA 1: Muda o trigger para que o Workflow 1 possa chamá-lo
 on:
-  push:
-    branches:
-      - staging
+  workflow_dispatch:
+    inputs:
+      # Um input opcional para carregar informações
+      message:
+        description: 'Mensagem do commit que acionou o sync'
+        required: false
+        default: 'Acionado pelo CI de staging'
 
 permissions:
   pull-requests: write
@@ -12,15 +17,18 @@ permissions:
 jobs:
   create_pr:
     runs-on: ubuntu-latest
-
     steps:
       - name: Criar PR para master
         uses: actions/github-script@v7
         with:
+          # O PAT ainda é necessário para criar o PR
           github-token: ${{ secrets.PR_CREATOR_TOKEN }}
           script: |
+            // ... (O código JavaScript Octokit original para criar PR permanece o mesmo)
             const head = "staging";
             const base = "master";
+            
+            // O código permanece o mesmo. O script do passo anterior já garantiu o merge.
 
             const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
