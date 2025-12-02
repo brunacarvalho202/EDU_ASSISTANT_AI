@@ -28,14 +28,17 @@ jobs:
         run: pip install -r requirements.txt
 
       # ----------------------------------------------------
-      # NOVO: Rodar Testes Unitários
+      # CORREÇÃO CRUCIAL: Variável de ambiente na chave 'env'
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
+        # DEFINIMOS A VARIÁVEL DE AMBIENTE AQUI.
+        # Isso garante que a variável RUN_INTEGRATION_TESTS seja lida como 'false' pelo pytest,
+        # pulando o teste de conexão com a AWS/Gemini no ambiente de CI.
+        env:
+          RUN_INTEGRATION_TESTS: false
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
-          # Define a variável para garantir que test_gemini_connection.py seja ignorado.
-          # Os testes de mock (Boto3, Factory, API) serão executados.
-          RUN_INTEGRATION_TESTS=false pytest
+          pytest
         # O GitHub Actions falhará neste passo se o pytest retornar um código de erro (testes falhados).
 
       # ----------------------------------------------------
