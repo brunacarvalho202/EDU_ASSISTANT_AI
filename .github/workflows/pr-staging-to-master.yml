@@ -1,9 +1,10 @@
 name: 2. PR Automática - staging → master
 
 on:
-  push:
-    branches:
-      - staging
+  workflow_run:
+    workflows: ["1. CI - Testes e Sync dev → staging"]
+    types:
+      - completed
 
 permissions:
   pull-requests: write
@@ -12,6 +13,7 @@ permissions:
 jobs:
   create_pr:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Criar PR para master
         uses: actions/github-script@v7
