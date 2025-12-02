@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Código
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # <<< IMPORTANTE para evitar "unrelated histories"
 
       - name: Configurar Python
         uses: actions/setup-python@v5
@@ -39,7 +41,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
 
-          git fetch origin
+          git fetch origin --prune
           git checkout staging
           git merge origin/dev --no-ff -m "Merge automático dev → staging"
           git push origin staging
