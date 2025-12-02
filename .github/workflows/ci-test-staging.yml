@@ -5,6 +5,11 @@ on:
     branches:
       - dev
 
+permissions:
+  contents: write       # necessário para ler código / commits
+  pull-requests: write  # necessário para criar PR
+  actions: read
+
 jobs:
   run_tests_and_create_pr:
     runs-on: ubuntu-latest
@@ -40,6 +45,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Verifica se PR já existe
             const { data: prs } = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -49,10 +55,11 @@ jobs:
             });
 
             if (prs.length > 0) {
-              console.log("PR já existe. Não será criada novamente.");
+              console.log("⚠️ PR já existe. Não será criada novamente.");
               return;
             }
 
+            // Tenta criar uma nova PR
             try {
               await github.rest.pulls.create({
                 owner: context.repo.owner,
@@ -62,9 +69,12 @@ jobs:
                 base: "staging",
                 body: "PR criada automaticamente após testes passarem com sucesso."
               });
+
+              console.log("✅ PR criada com sucesso: dev → staging");
+
             } catch (error) {
               if (error.status === 422) {
-                console.log("Nenhuma mudança entre dev e staging. PR não criada.");
+                console.log("ℹ️ Nenhuma mudança entre dev e staging. PR não criada.");
               } else {
                 throw error;
               }
