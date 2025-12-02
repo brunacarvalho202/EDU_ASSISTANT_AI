@@ -1,8 +1,3 @@
-#CI : Dev -> Staging
-#Este arquivo é responsável pela Integração Contínua (CI). 
-#Ele garante que as mudanças em dev funcionem e as promove para o ambiente de testes (staging)
-
-# Caminho: .github/workflows/ci-test-staging.yml
 name: 1. CI - Testes e PR para Staging
 
 # Este workflow é acionado em todo push na branch 'dev'
@@ -28,20 +23,18 @@ jobs:
         run: pip install -r requirements.txt
 
       # ----------------------------------------------------
-      # CORREÇÃO CRUCIAL: Variável de ambiente na chave 'env'
+      # NOVO: Rodar Testes Unitários
       # ----------------------------------------------------
       - name: Rodar Testes Unitários
-        # AJUSTE AQUI: Mudamos de 'false' para string vazia ''.
-        # Isso força o Python a interpretar o valor como 'False' (falsy) para que o skipif seja 'True'.
+        # Garante que o teste de integração seja pulado (string vazia é Falsy no Python)
         env:
           RUN_INTEGRATION_TESTS: ''
         run: |
           echo "Rodando testes unitários (ignorando testes de integração)..."
           pytest
-        # O GitHub Actions falhará neste passo se o pytest retornar um código de erro (testes falhados).
 
       # ----------------------------------------------------
-      # PR para Staging (Só roda se os testes passarem!)
+      # PR para Staging (CORRIGIDO: Removido 'head' e 'update-branch')
       # ----------------------------------------------------
       - name: Criar Pull Request para Staging
         # Esta etapa só será alcançada se o passo anterior ('Rodar Testes Unitários') for bem-sucedido.
@@ -50,7 +43,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: 'Merge de dev para staging: Nova feature pronta para code review'
           title: 'Merge de Feature (dev) para Staging'
-          base: staging # Destino pós commit na dev
-          head: dev     # Origem
-          # Garante que o PR seja atualizado, não duplicado
-          update-branch: true
+          base: staging # Destino (Correto: onde as mudanças vão)
+          # A branch de origem (head) 'dev' é inferida automaticamente,
+          # e o 'update-branch' agora é o comportamento padrão
