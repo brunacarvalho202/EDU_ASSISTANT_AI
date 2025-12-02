@@ -11,9 +11,9 @@ jobs:
     
     # Define permissões no nível do job para evitar erros de sintaxe (como o 'Unexpected value workflows')
     permissions:
-      contents: write # Necessário para Checkout e para fazer o push com PAT
+      contents: write
       actions: read
-      workflows: write # CRUCIAL para disparar o Workflow 2
+      workflows: write
 
     steps:
       - name: Checkout Código
@@ -84,7 +84,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               # O nome exato do arquivo YAML do Workflow 2
-              workflow_id: '2. pr-staging-master.yml', 
+              workflow_id: 'pr-staging-to-master.yml', 
               ref: 'staging',
               inputs: {
                 message: 'PR acionada automaticamente após merge dev -> staging.'
